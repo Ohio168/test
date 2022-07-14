@@ -1,0 +1,196 @@
+
+AWS Fundamentals
+•	Region (>= 2 AZs) > AZ > edge location (for caching content using CloudFront)
+
+Shared responsibility model
+•	You: security group, IAM user, patching EC2 OS, patching DB, etc
+•	AWS: DC management, security camera, cabling, patching RDS OS, etc.
+•	Shared: Encryption
+
+Key services 
+•	Compute: EC2, Lambda, Elastic Beanstalk
+•	Storage: S3, EBS, EFS,, FSX, Storage Gateway
+•	Database: RDS, DynamoDB, Redshift
+•	Networking: VPC, Direct Connect, Route 53, API Gateway, AWS Global Accelerator
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Identity and Access management (IAM)
+•	4 steps to secure root account:
+o	Enable Multi-factor authentication
+o	Create admin group
+o	Create user account
+o	Add user to admin group
+•	IAM Policy Documents (in json)
+•	IAM is universal: apply to all regions. User or group are created universally.
+•	New users: no permissions when first created
+o	User’s access key ID and secret access keys <> username/password
+o	Password, access key and secret key don't automatically rotate or change without human interaction.
+o	MFA for users is not mandatory, but it's a good idea.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+S3
+•	Object-based file storge. File stored in buckets 
+•	Not suitable for OS or DB storage
+•	File size: 0-5TB
+•	S3 is universal namespace: Bucket name is globally unique 
+
+Secure bucket with S3
+•	Buckets are private by default (including objects within in). Set both bucket and object public to allow public access
+•	Can make individual object public using object ACLs
+•	Can make entire bucket public using bucket policies
+
+Hosting a static website
+•	Static content: S3 is great place to store static content only
+•	Auto scaling: S3 scales automatically with demand
+
+6 S3 storage classes
+•	S3 standard: 			99.99% availability, 11 9’s Durability. AZ>=3. For most workloads
+•	S3 standard-Infrequent Access: 	99.9% availability, 11 9’s Durability. AZ>=3. Long-term, infrequency accessed critical data (e.g., backups, disaster recovery files, etc)
+•	S3 one Zone-Infrequent Access: 	99.5% availability, 11 9’s Durability. AZ=1. Long-term, infrequency accessed, non-critical data
+•	S3 Glacier: 			99.99% availability, 11 9’s Durability. AZ>=3. Long-term data archiving  that occasionally need to access within a few hours or minutes
+•	S3 Glacier Deep Archive: 	99.99% availability, 11 9’s Durability. AZ>=3. Rarely accessed data archiving with a default retrieval time of 12 hours
+•	S3 Intelligent-Tiering: 		99.9% availability, 11 9’s Durability. AZ>=3. Machine learning. Unknown or unpredictable access patterns
+
+Lifecyle management
+•	Lifecycle policies can't work backwards. You can use a lifecycle policy to migrate objects from the more frequently accessed storage classes to the longer-term options, but not the other way around
+
+S3 Object Lock and Glacier Vault Lock 
+•	Use S3 Object Lock to store object using write once, read many (WORM) model
+•	Object Lock can be on individual object or bucket as a whole
+•	Object Lock has 2 modes: governance mode (special account can overwrite or delete object version) and compliance mode (even root user cant overwrite)
+•	Glacier Vault Lock is only available for Glacier
+
+S3 encryption
+•	Encryption in Transit
+o	SSL/TLS
+o	HTTPS
+•	Encryption at Rest: SSE
+o	Server-side encryption
+o	SSE-S3 (AES 256-bit)
+o	SSE-KMS (region-specific KMS limit)
+o	SSE-C
+•	Client-Side Encryption
+
+S3 performance optimization
+•	Multipart uploads for files over 100MB
+•	S3 byte-range fetch for download
+•	Create more prefixes in a bucket and parallelize reads/writes
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+EC2
+•	Like a VM, hosted in AWS instead of your own data center
+o	Grow and shrink when  you need
+o	Pay for what you need
+
+4 EC2 pricing options
+•	On-demand: premium
+•	Spot: Discount up to 90%. Great for flexible start and end times.
+o	Use Spot block to block instance from terminating
+•	Reserved: Up to 72% discount. Great for known, fixed requirements. 
+•	Dedicated: dedicated EC2 server. Great for server-bound licenses or compliance requirements (e.g., hardware-specific licensing requirement)
+
+Roles:
+•	Roles are preferred from a security perspective.
+•	Avoid hard coding credentials
+•	Polices control role’s permissions
+•	Updating a policy attached to a role takes immediate effect
+
+Security Group:
+•	Changes to security group takes effect immediately
+•	You can have any number of EC2 instance within a security group
+•	You can have multiple security group attached to EC2 instance
+•	All inbound traffic is blocked by default
+•	All outbound traffic is allowed
+
+User data vs Metadata
+•	User data are bootstrap scripts. Used for bootstrapping EC2 instance as it comes online
+•	Metadata is data about EC2 instances
+•	You can use bootstrap scripts (user data) to access metadata 
+
+3 networking device
+•	ENI: basic networking. Low cost. Use multiple ENIs for each EC2 instance
+•	Enhanced networking: 10Gbps – 100 Gbps
+•	EFA: for HPC, ML or OS-bypass
+
+3 types of placement groups
+•	Cluster placement groups: low latency, high throughput. For HPC
+•	Spread placement groups: individual critical EC2 instances
+•	Partition placement groups: multiple EC2 instances
+o	Cluster placement group cant span multiple AZ. Spread placement group and Partition placement group can.
+o	Only certain type of instances can be launched in a placement group (compute optimized, GPU, memory optimized, storage optimized).
+o	AWS recommend homogenous instance within Cluster placement group
+o	You cant merge placement groups.
+o	You can move existing instance into a placement group when it is in the stopped state.
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Elastic Block Storage (EBS) and Elastic File System (EFS)
+
+EBS SSD volumes
+•	gp2 (General Purpose SSD)
+o	for boot disks and general application
+o	up to 16,000 IOPS per volume
+o	99.9% durability
+•	gp3 (General Purpose SSD)
+o	for high performance application 
+o	predictable 3,000 IOPS baseline performance and 125 MiB/s
+o	99.9% durability
+•	io1 (Provisioned IOPS SSD)
+o	for OLTP latency-sensitive application
+o	50 IOPS/GiB
+o	up to 64,000 IOPS per volume
+o	99.9% durability
+•	Io2 (Provisioned IOPS SSD)
+o	for OLTP latency-sensitive application
+o	500 IOPS/GiB
+o	up to 64,000 IOPS per volume
+o	99.999% durability
+
+EBS HDD volumes
+•	st1 (Throughput Optimized HDD)
+o	for big data, data warehouse, ETL
+o	max throughput 500 MB/s per volume
+o	cant be a boot volume
+o	99.9% durability
+•	sc1 (Cold HDD)
+o	max throughput 250 MB/s per volume
+o	less frequently accessed data
+o	cant be a boot volume
+o	lowest cost
+o	99.9% durability
+
+
+Volume vs Snapshot
+•	Volume exists on EBS, snapshot exists on S3
+•	Snapshots are point-in-time photographs of volumes and are incremental in nature
+•	For consistent snapshots, stop instance and detach volume
+•	You can share snapshots between AWS accounts and between regions, but first you need to copy that snapshot to the target region
+•	You can resize EBS volumes on the fly as well as changing volume types.
+
+Amazon Machine Images (AMI) EBS vs Instance Store
+•	Instance store volumes are ephemeral storage
+•	You can reboot both EBS and instance store volumes and you will not lose data
+•	Instance store volumes cannot be stopped (lose data). EBS-backed instance can be stopped. 
+•	By default both root volumes will be deleted on termination. However, with EBS volumes, you can tell AWS to keep root device volume.
+•	AMI is just a blueprint for a EC2 instance 
+
+
+Encrypted volume
+•	Data a rest is encrypted inside the volume
+•	Data in flight moving between instance and volume is encrypted
+•	All snapshots are encrypted
+•	Volume created from snapshot is encrypted
+
+To encrypt volume
+•	Create a snapshot of unencrypted root device volume
+•	Create a copy of snapshot and select encrypt option
+•	Create AMI from encrypted snapshot
+•	Use AMI to launch new encrypted instance
+
+
+
+
+
+
+
